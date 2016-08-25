@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import sys
+from timestamps import *
 
 tick = 1E-2
 
@@ -111,123 +112,36 @@ reverse_tags = {v: k for k, v in tags.items()}
 #
 # _____________________________________________________________________________
 #
-class Timestamp(object):
-
-    def __init__(self, counter=None, tag=None):
-        self.counter = counter
-        self.tag = tag
-
-    def __str__(self):
-        return self.getCode()
-
-    def parseCode(self, code):
-        self.counter = int(code[2:8], base = 16)
-        self.tag = int(code[0:2], base = 16)
-
-    def getCode(self):
-        return '{0:02X}{1:06X}'.format(self.tag, self.counter)
-
-    def applyDelta(self, delta):
-        self.counter += delta
-
-
-#
-# _____________________________________________________________________________
-#
-class TimestampList(object):
-
-    def __init__(self, timestamps=None):
-        self.timestamps = timestamps
-
-    def __len__(self):
-        return len(self.timestamps)
-
-    def __str__(self):
-        return self.getCodes()
-
-    def __iter__(self):
-        return iter(self.timestamps)
-
-    def __getitem__(self, index):
-        if isinstance(index, int):
-            return self.timestamps[index]
-
-    def parseCodes(self, codes):
-        self.timestamps = []
-        for code in codes.split('\n'):
-            ts = Timestamp()
-            ts.parseCode(code)
-            self.timestamps += [ts]
-
-    def getCodes(self):
-        return '\n'.join([str(ts) for ts in self.timestamps])
-
-    def applyDelta(self, delta):
-        for ts in self.timestamps:
-            ts.applyDelta(delta)
-
-
-#
-# _____________________________________________________________________________
-#
 def main(argv):
 
-    if len(argv) < 1:
-        printDefines()
-        return
-    elif len(argv) == 1:
-        filename = argv[0]
+    if len(argv) == 3:
+        filenameIn = argv[0]
+        filenameOut = argv[1]
+        delta = int(argv[2], base=16)
     else:
         print "Wrong number of arguments. Stopping."
+        print "Expecting <input-file> <output-file> <delta-in-hex>"
         return
 
     # read input file
-    try:
-        f = open(filename, 'r')
-        lines = [line.strip() for line in f]
-        codes = '\n'.join([line for line in lines
-                if len(line) == 8 and line[0] != '#'])
-        f.close()
-    except:
-        print "Failed to read input file. Stopping."
-        return
-
-    # parse timestamp codes
     timestamps = TimestampList()
     try:
-        timestamps.parseCodes(codes)
+        timestamps.parseFile(filenameIn)
     except:
-        print "Failed to parse input file. Stopping."
+        print "Failed to read/parse input file. Stopping."
         return
 
+    # apply delta
+    timestamps.applyDelta(delta)
 
-    # print timestamps
-    for i in range(len(timestamps)):
-        tagName = tags[timestamps[i].tag]
-        time = timestamps[i].counter * tick
-        if tagName.endswith("_END"):
-            for j in range(i, -1, -1):
-                tagName2 = tags[timestamps[j].tag]
-                time2 = timestamps[j].counter * tick
-                if tagName2 == tagName[0:-4] + '_BEGIN':
-                    match = '[{0:2}]---({1:^16})--->[{2:2}] {3:>8.2f} ms' \
-                            .format(j, tagName[0:-4], i, time - time2)
-                    break
-        else:
-            match = ''
-        print('{0:2}: {1:>8.2f} ms: {2:30} {3}'.format(i, time, tagName, match))
-
+    # write output file
+    with open(filenameOut, "w") as f:
+        f.write(timestamps.getCodes())
 
 
 #
 # _____________________________________________________________________________
 #
-def printDefines():
-
-    for tag in tags:
-        print '#define {0:30} {1:#02x}'.format(tags[tag], tag)
-
-
 if __name__ == "__main__":
     main(sys.argv[1:]);
 
