@@ -111,6 +111,65 @@ reverse_tags = {v: k for k, v in tags.items()}
 #
 # _____________________________________________________________________________
 #
+class Timestamp(object):
+
+    def __init__(self, counter=None, tag=None):
+        self.counter = counter
+        self.tag = tag
+
+    def __str__(self):
+        return self.getCode()
+
+    def parseCode(self, code):
+        self.counter = int(code[2:8], base = 16)
+        self.tag = int(code[0:2], base = 16)
+
+    def getCode(self):
+        return '{0:02X}{1:06X}'.format(self.tag, self.counter)
+
+    def applyDelta(self, delta):
+        self.counter += delta
+
+
+#
+# _____________________________________________________________________________
+#
+class TimestampList(object):
+
+    def __init__(self, timestamps=None):
+        self.timestamps = timestamps
+
+    def __len__(self):
+        return len(self.timestamps)
+
+    def __str__(self):
+        return self.getCodes()
+
+    def __iter__(self):
+        return iter(self.timestamps)
+
+    def __getitem__(self, index):
+        if isinstance(index, int):
+            return self.timestamps[index]
+
+    def parseCodes(self, codes):
+        self.timestamps = []
+        for code in codes.split('\n'):
+            ts = Timestamp()
+            ts.parseCode(code)
+            self.timestamps += [ts]
+
+    def getCodes(self):
+        return '\n'.join([str(ts) for ts in self.timestamps])
+
+    def applyDelta(self, delta):
+        for ts in self.timestamps:
+            ts.applyDelta(delta)
+
+
+#
+# _____________________________________________________________________________
+#
 def main(argv):
 
     if len(argv) < 1:
@@ -119,46 +178,45 @@ def main(argv):
     elif len(argv) == 1:
         filename = argv[0]
     else:
-        print "Wrong number of arguments"
+        print "Wrong number of arguments. Stopping."
         return
 
-    list = []
-
+    # read input file
     try:
         f = open(filename, 'r')
-        for line in f:
-            stripped = line.strip();
-            if len(stripped) == 8 and stripped[0] != '#':
-                list.append(stripped)
-        f.close();
-
-        for i in range(0, len(list)):
-            (tag, stamp) = dissect(list[i])
-            if tag.endswith("_END"):
-                for j in range(i, -1, -1):
-                    (ptag, pstamp) = dissect(list[j]);
-                    if ptag == tag[0 : len(tag) - 4] + '_BEGIN':
-                        match = '[{0:2}]---({1:^16})--->[{2:2}] {3:>8.2f} ms'.format(j, tag[0 : len(tag) - 4], i, stamp - pstamp)
-                        break
-            else:
-                match = ''
-            print '{0:2}: {1:>8.2f} ms: {2:30} {3}'.format(i, stamp, tag, match)
-
+        lines = [line.strip() for line in f]
+        codes = '\n'.join([line for line in lines
+                if len(line) == 8 and line[0] != '#'])
+        f.close()
     except:
-        print "Error opening file", filename
+        print "Failed to read input file. Stopping."
+        return
 
-
-#
-# _____________________________________________________________________________
-#
-def dissect(str):
-
+    # parse timestamp codes
+    timestamps = TimestampList()
     try:
-        tag = tags[int(str[0:2], base = 16)]
-        stamp = tick * int(str[2:8], base = 16)
-        return (tag, stamp)
+        timestamps.parseCodes(codes)
     except:
-        print "Error dissecting time stamp", str
+        print "Failed to parse input file. Stopping."
+        return
+
+
+    # print timestamps
+    for i in range(len(timestamps)):
+        tagName = tags[timestamps[i].tag]
+        time = timestamps[i].counter * tick
+        if tagName.endswith("_END"):
+            for j in range(i, -1, -1):
+                tagName2 = tags[timestamps[j].tag]
+                time2 = timestamps[j].counter * tick
+                if tagName2 == tagName[0:-4] + '_BEGIN':
+                    match = '[{0:2}]---({1:^16})--->[{2:2}] {3:>8.2f} ms' \
+                            .format(j, tagName[0:-4], i, time - time2)
+                    break
+        else:
+            match = ''
+        print('{0:2}: {1:>8.2f} ms: {2:30} {3}'.format(i, time, tagName, match))
+
 
 
 #
@@ -167,7 +225,7 @@ def dissect(str):
 def printDefines():
 
     for tag in tags:
-        print '#define {0:30} {1:#x}'.format(tags[tag], tag)
+        print '#define {0:30} {1:#02x}'.format(tags[tag], tag)
 
 
 if __name__ == "__main__":
