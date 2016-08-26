@@ -133,16 +133,17 @@ def main(argv):
         return
 
     # print timestamps
+    maxTagLen = max([len(tagName) for tagName in tags.values()])
     for i in range(len(timestamps)):
-        tagName = tags[timestamps[i].tag]
+        tagName = tags.get(timestamps[i].tag, 'UNKNOWN')
         time = timestamps[i].counter * tick
         if tagName.endswith("_END"):
             for j in range(i, -1, -1):
-                tagName2 = tags[timestamps[j].tag]
+                tagName2 = tags.get(timestamps[j].tag, 'UNKNOWN')
                 time2 = timestamps[j].counter * tick
                 if tagName2 == tagName[0:-4] + '_BEGIN':
-                    match = '[{0:2}]---({1:^16})--->[{2:2}] {3:>8.2f} ms' \
-                            .format(j, tagName[0:-4], i, time - time2)
+                    match = '[{0:2}]---({1:^{4}})--->[{2:2}] {3:>8.2f} ms' \
+                            .format(j, tagName[0:-4], i, time - time2, maxTagLen)
                     break
         else:
             match = ''
