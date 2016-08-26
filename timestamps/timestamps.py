@@ -18,7 +18,7 @@ class Timestamp(object):
         self.tag = int(code[0:2], base = 16)
 
     def getCode(self):
-        return '{0:02X}{1:06X}'.format(self.tag, self.counter)
+        return '{0:02X}{1:06X}'.format(self.tag, self.counter % 16**6)
 
     def applyDelta(self, delta):
         self.counter += delta
@@ -46,10 +46,15 @@ class TimestampList(object):
             return self.timestamps[index]
 
     def parseCodes(self, codes):
+        offset = 0
         self.timestamps = []
         for code in codes.split('\n'):
             ts = Timestamp()
             ts.parseCode(code)
+            if len(self.timestamps):
+                if (ts.counter + offset) < self.timestamps[-1].counter:
+                    offset += 16**6
+            ts.applyDelta(offset)
             self.timestamps += [ts]
 
     def parseFile(self, filename):

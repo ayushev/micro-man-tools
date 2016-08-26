@@ -147,7 +147,8 @@ def main(argv):
                     break
         else:
             match = ''
-        print('{0:2}: {1:>8.2f} ms: {2:30} {3}'.format(i, time, tagName, match))
+        print('{0:2}: {1:>8.2f} ms: {2:40} {3}'.format(i, time, 
+                '{0} (0x{1:02X})'.format(tagName, timestamps[i].tag), match))
 
 
 

@@ -3,10 +3,10 @@
 import sys
 from timestamps import *
 
-tag1a = 0x01
-tag2b = 0x02
-tag3b = 0x03
-tag4a = 0x04
+tag1a = 0x02
+tag2b = 0x03
+tag3b = 0x04
+tag4a = 0x05
 
 
 #
@@ -51,7 +51,7 @@ def main(argv):
         delta = counter2b - 0.5*(counter4a - counter1a - \
             counter3b + counter2b) - counter1a
                 
-        print('Counter delta A-->B is: 0x{0:06x}'.format(int(delta)))
+        print('Counter delta A-->B is: 0x{0:06x}'.format(int(delta) % 16**6))
 
 
 #
