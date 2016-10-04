@@ -4,7 +4,7 @@
  *
  * Author: Andreas Walz (andreas.walz@hs-offenburg.de)
  *
- * This file is part of THE-MAN-TOOLS.
+ * This file is part of MICRO-MAN-TOOLS.
  *
  * THE-MAN-TOOLS are free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
