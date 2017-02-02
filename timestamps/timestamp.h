@@ -31,6 +31,9 @@
 /* Function to set a time stamp, i.e. write a time stamp to the buffer */
 void timestamp_set(uint_fast8_t tag);
 
+/* Function to set a time stamp without a tag */
+void timestamp_set_notag(void);
+
 /* Function to send out all time stamps from the buffer and clear the buffer */
 void timestamp_flush(void);
 

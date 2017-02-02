@@ -62,6 +62,20 @@ void timestamp_set(uint_fast8_t tag) {
 
 
 /*
+ * Function to set a time stamp without a tag
+ * ___________________________________________________________________________
+ */
+void timestamp_set_notag(void) {
+
+	/* read the current state of the tick counter */
+	uint32_t ticks = timestamp_get_ticks();
+
+	/* store in memory */
+	timestamp_buf[timestamp_n++] = ticks;
+}
+
+
+/*
  * Function to send out all time stamps from the buffer and clear the buffer
  * ___________________________________________________________________________
  */
