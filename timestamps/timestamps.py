@@ -10,18 +10,41 @@ class Timestamp(object):
         self.counter = counter
         self.tag = tag
 
-    def __str__(self):
-        return self.getCode()
+    def applyDelta(self, delta):
+        self.counter += delta
+
+
+class TimestampHex(Timestamp):
 
     def parseCode(self, code):
+        if not isinstance(code, str) or len(code) != 8:
+            raise Exception('Invalid code "{0}"'.format(code))
         self.counter = int(code[2:8], base = 16)
         self.tag = int(code[0:2], base = 16)
 
     def getCode(self):
         return '{0:02X}{1:06X}'.format(self.tag, self.counter % 16**6)
 
-    def applyDelta(self, delta):
-        self.counter += delta
+    def __str__(self):
+        return '{0:02X}:{1:06X}'.format(self.tag, self.counter % 16**6)
+
+
+class TimestampBase64(Timestamp):
+
+    def parseCode(self, code):
+        if not isinstance(code, str) or len(code) != 8:
+            raise Exception('Invalid code "{0}"'.format(code))
+        hexStamp = code.decode('base64').encode('hex')
+        self.counter = int(hexStamp[0:8], base = 16)
+        self.tag = int(hexStamp[8:12], base = 16)
+
+    def getCode(self):
+        return '{0:08X}{1:04X}' \
+                .format(self.counter % 16**8, self.tag).encode('base64')
+
+    def __str__(self):
+        return '{1:04X}:{0:08X}' \
+                .format(self.counter % 16**8, self.tag)
 
 
 #
@@ -29,11 +52,12 @@ class Timestamp(object):
 #
 class TimestampList(object):
 
-    def __init__(self, timestamps=None):
+    def __init__(self, timestamps=None, base64=False):
         self.timestamps = timestamps
+        self.base64 = base64
 
     def __len__(self):
-        return len(self.timestamps)
+        return len(self.timestamps) if self.timestamps is not None else 0
 
     def __str__(self):
         return self.getCodes()
@@ -49,11 +73,11 @@ class TimestampList(object):
         offset = 0
         self.timestamps = []
         for code in codes.split('\n'):
-            ts = Timestamp()
+            ts = TimestampBase64() if self.base64 else TimestampHex()
             ts.parseCode(code)
             if len(self.timestamps):
                 if (ts.counter + offset) < self.timestamps[-1].counter:
-                    offset += 16**6
+                    offset += 16**8 if self.base64 else 16**6
             ts.applyDelta(offset)
             self.timestamps += [ts]
 
@@ -63,10 +87,11 @@ class TimestampList(object):
         codes = '\n'.join([line for line in lines
                 if len(line) == 8 and line[0] != '#'])
         f.close()
-        self.parseCodes(codes)
+        if len(codes) > 0:
+            self.parseCodes(codes)
 
     def getCodes(self):
-        return '\n'.join([str(ts) for ts in self.timestamps])
+        return '\n'.join([ts.getCode() for ts in self.timestamps])
 
     def applyDelta(self, delta):
         for ts in self.timestamps:

@@ -14,6 +14,8 @@ tags[0xFF] = "TS_CALIBRATION_END"
 # Library init
 tags[0x00] = "TS_LIB_INIT_BEGIN"
 tags[0x01] = "TS_LIB_INIT_END"
+tags[0x02] = "TS_TEST_BEGIN"
+tags[0x03] = "TS_TEST_END"
 
 # Pseudo random function
 tags[0x10] = "TS_PRF_BEGIN"
@@ -125,12 +127,20 @@ def main(argv):
         return
 
     # read input file
-    timestamps = TimestampList()
+    timestamps = TimestampList(None, True)
+
+    timestamps.parseFile(filename)
+
+
     try:
         timestamps.parseFile(filename)
     except:
         print "Failed to read/parse input file. Stopping."
         return
+
+#    for i in range(len(timestamps)):
+#        print(str(timestamps[i]))
+#    return
 
     # print timestamps
     maxTagLen = max([len(tagName) for tagName in tags.values()])
