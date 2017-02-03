@@ -6,6 +6,81 @@ import sys
 #
 # _____________________________________________________________________________
 #
+class TextFormatter(object):
+
+    useColor = True
+
+    strColorEnd = '\033[0m'
+
+    @staticmethod
+    def makeBoldWhite(s):
+        if TextFormatter.useColor:
+            return '\033[1m' + s + TextFormatter.strColorEnd
+        return s
+
+    @staticmethod
+    def makeBoldRed(s):
+        if TextFormatter.useColor:
+            return '\033[1;31m' + s + TextFormatter.strColorEnd
+        return s
+
+    @staticmethod
+    def makeBoldGreen(s):
+        if TextFormatter.useColor:
+            return '\033[1;32m' + s + TextFormatter.strColorEnd
+        return s
+
+    @staticmethod
+    def makeBoldYellow(s):
+        if TextFormatter.useColor:
+            return '\033[1;33m' + s + TextFormatter.strColorEnd
+        return s
+
+    @staticmethod
+    def makeBoldBlue(s):
+        if TextFormatter.useColor:
+            return '\033[1;34m' + s + TextFormatter.strColorEnd
+        return s
+
+    @staticmethod
+    def makeBoldPurple(s):
+        if TextFormatter.useColor:
+            return '\033[1;35m' + s + TextFormatter.strColorEnd
+        return s
+
+    @staticmethod
+    def makeBoldCyan(s):
+        if TextFormatter.useColor:
+            return '\033[1;36m' + s + TextFormatter.strColorEnd
+        return s
+
+    @staticmethod
+    def makeGreen(s):
+        if TextFormatter.useColor:
+            return '\033[32m' + s + TextFormatter.strColorEnd
+        return s
+
+    @staticmethod
+    def makeRed(s):
+        if TextFormatter.useColor:
+            return '\033[31m' + s + TextFormatter.strColorEnd
+        return s
+
+    @staticmethod
+    def makeBlue(s):
+        if TextFormatter.useColor:
+            return '\033[34m' + s + TextFormatter.strColorEnd
+        return s
+
+    @staticmethod
+    def indent(str, level=1):
+        lines = [' '*(4 if s else 0)*level + s for s in str.split('\n')]
+        return '\n'.join(lines)
+
+
+#
+# _____________________________________________________________________________
+#
 class Microtag(object):
 
     def __init__(self):
@@ -16,24 +91,6 @@ class Microtag(object):
         if self.data is None or self.id is None:
             raise Exception('Undefined microtag')
         return '{0:04X}:{1:08X}'.format(self.id, self.data)
-
-    def isStartTag(self):
-        return True if self.id >= 0x0000 and self.id <= 0x3FFF else False
-
-    def isStopTag(self):
-        return True if self.id >= 0x4000 and self.id <= 0x7FFF else False
-
-    def isEventTag(self):
-        return True if self.id >= 0x8000 and self.id <= 0xBFFF else False
-
-    def isDataTag(self):
-        return True if self.id >= 0xC000 and self.id <= 0xEFFF else False
-
-    def isTickBasedTag(self):
-        if self.isStartTag() or self.isStopTag() or self.isEventTag():
-            return True
-        else:
-            return False
 
     def importFromCode(self, code):
 
@@ -56,10 +113,16 @@ class Microtag(object):
 #
 class MicrotagList(object):
 
-    def __init__(self, idDict=None, tickToTime=None):
+    def __init__(self, idDict=None, dataToTime=None):
         self.microtags = []
         self.idDict = idDict if idDict is not None else {}
-        self.tickToTime = tickToTime
+
+        # conversion function from data (ticks) to time
+        if dataToTime is not None:
+            self.dataToTime = dataToTime
+        else:
+            # the default is using ticks
+            self.dataToTime = lambda c: (c, 'ticks', 0)
 
     def __len__(self):
         return len(self.microtags)
@@ -67,25 +130,97 @@ class MicrotagList(object):
     def __str__(self):
         lines = []
 
-        idNameWidth = max([len(s) for s in self.idDict.values()])
+        # determine length of longest string in dictionary
+        # (removing leading type definitions, if present)
+        idNameWidth = max([len(s if s.find(':') == -1 else s[s.find(':')+1:]) \
+                for s in self.idDict.values()] + [8])
+
+        # a list of indices referring to unmatched start tags
+        unmatchedStarts = []
 
         for i, tag in enumerate(self.microtags):
-            line = '[{0:{1}}] '.format(i, 5)
 
-            if self.idDict is not None:
-                line += '{0:{1}}'.format(self.idDict.get(tag.id, ''), idNameWidth)
+            # ===== tag index =====
 
-            if tag.isStartTag():
-                line += 'Start({0:04X}) '.format(tag.id)
-            elif tag.isStopTag():
-                line += 'Stop ({0:04X}) '.format(tag.id)
-            elif tag.isEventTag():
-                line += 'Event({0:04X}) '.format(tag.id)
-            elif tag.isDataTag():
-                line += 'Data ({0:04X}) '.format(tag.id)
+            line = '{0:{1}}: '.format(i, 5)
 
-            if tag.isTickBasedTag() and self.tickToTime is not None:
-                line += '{0} s'.format(self.tickToTime(tag.data))
+            # ===== tag id or id alias =====
+
+            if tag.id in self.idDict:
+                # tag id alias from dictionary
+                idAlias = self.idDict[tag.id]
+                # extract tag type (start, stop, event, data)
+                if idAlias.startswith('start:'):
+                    # << this is a start tag >>
+                    tagType = '<'
+                    idAlias = idAlias[6:]
+                    idAliasPrinted = TextFormatter.makeBoldGreen('{0:{1}}' \
+                            .format(idAlias, idNameWidth + 2))
+                elif idAlias.startswith('stop:'):
+                    # << this is a stop tag >>
+                    tagType = '>'
+                    idAlias = idAlias[5:]
+                    idAliasPrinted = TextFormatter.makeBoldRed('{0:{1}}' \
+                            .format(idAlias, idNameWidth + 2))
+                elif idAlias.startswith('event:'):
+                    # << this is an event tag >>
+                    tagType = '!'
+                    idAlias = idAlias[6:]
+                    idAliasPrinted = TextFormatter.makeBoldYellow('{0:{1}}' \
+                            .format(idAlias, idNameWidth + 2))
+                elif idAlias.startswith('data:'):
+                    # << this is a data tag >>
+                    tagType = 'D'
+                    idAlias = idAlias[5:]
+                    idAliasPrinted = TextFormatter.makeBoldBlue('{0:{1}}' \
+                            .format(idAlias, idNameWidth + 2))
+                else:
+                    # << tag is in dictionary but its type is unknown >>
+                    tagType = '?'                    
+                    idAliasPrinted = idAlias
+            else:
+                # << tag is not in dictionary >>
+                tagType = '?'                    
+                idAlias = '[0x{0:04X}]'.format(tag.id)
+                idAliasPrinted = '{0:{1}}'.format(idAlias, idNameWidth + 2)
+
+            line += tagType + ' ' + idAliasPrinted
+        
+            # ===== tag content, i.e. time or data =====  
+
+
+            if tagType in '<>!':
+                time = self.dataToTime(tag.data)
+                content = '{0:,.{2}f} {1}'.format(time[0], time[1], time[2])
+            elif tagType == 'D':
+                content = '[ 0x{0:08X} ]'.format(tag.data)
+            line += '{0:>20}  '.format(content)
+
+
+          
+            if tagType == '<':
+
+
+                # add indeces of start tags to list of unmatched start tags
+                unmatchedStarts += [i]
+
+            elif tagType == '>':
+
+                # find corresponding start tag
+                matchingStarts = [j for j in unmatchedStarts[::-1] \
+                        if self.idDict[self.microtags[j].id] \
+                                == 'start:{0}'.format(idAlias)]
+                matchingStart = matchingStarts[0] \
+                        if len(matchingStarts) > 0 else None
+
+                if matchingStart is not None:
+                    line += '[{0:{1}}]---({2:^{3}})--->[{4:{1}}]  '.format(matchingStart, 5, idAlias, idNameWidth, i)
+
+                    tStart = self.dataToTime(self.microtags[matchingStart].data)
+                    tStop = self.dataToTime(tag.data)
+                    line += '{0:,.{2}f} {1}'.format(tStop[0] - tStart[0], tStop[1], tStop[2])
+
+
 
             lines += [line]
 
@@ -137,8 +272,17 @@ def main(argv):
         print "Expecting <input-file>"
         return
 
+    idDict = {
+        0x0000 : 'start:Delay',
+        0x4000 : 'stop:Delay',
+        0x0001 : 'start:printf',
+        0x4001 : 'stop:printf',
+        0x0002 : 'start:Single Call',
+        0x4002 : 'data:Single Call'
+    }
+
     # read input file
-    microtags = MicrotagList({ 0x0000 : 'Delay', 0x8000 : 'Event' }, lambda c: c / 84E6)
+    microtags = MicrotagList(idDict, lambda c: (c / 84E6, 's', 3))
 
     try:
         n = microtags.importFromFile(filename)
