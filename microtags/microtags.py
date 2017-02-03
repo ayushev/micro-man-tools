@@ -124,16 +124,31 @@ class MicrotagList(object):
             # the default is using ticks
             self.dataToTime = lambda c: (c, 'ticks', 0)
 
+    def dataToTimeStr(self, data):
+        time = self.dataToTime(data)
+        return '{0:,.{2}f} {1}'.format(time[0], time[1], time[2]) 
+
+    def dataToTimeDiffStr(self, dataStart, dataStop):
+        timeStart = self.dataToTime(dataStart)
+        timeStop = self.dataToTime(dataStop)
+        return '{0:,.{2}f} {1}'.format(
+                timeStop[0] - timeStart[0], timeStop[1], timeStop[2])
+
     def __len__(self):
         return len(self.microtags)
 
     def __str__(self):
+
+        # prepare output as a list of lines
         lines = []
 
-        # determine length of longest string in dictionary
+        # determine length of longest string in tag id alias dictionary
         # (removing leading type definitions, if present)
-        idNameWidth = max([len(s if s.find(':') == -1 else s[s.find(':')+1:]) \
+        widthId = max([len(s if s.find(':') == -1 else s[s.find(':')+1:]) \
                 for s in self.idDict.values()] + [8])
+
+        # determine length of highest tag index
+        widthIndex = len('{0}'.format(len(self.microtags)))
 
         # a list of indices referring to unmatched start tags
         unmatchedStarts = []
@@ -142,7 +157,7 @@ class MicrotagList(object):
 
             # ===== tag index =====
 
-            line = '{0:{1}}: '.format(i, 5)
+            line = '{0:{1}}: '.format(i, widthIndex)
 
             # ===== tag id or id alias =====
 
@@ -155,25 +170,25 @@ class MicrotagList(object):
                     tagType = '<'
                     idAlias = idAlias[6:]
                     idAliasPrinted = TextFormatter.makeBoldGreen('{0:{1}}' \
-                            .format(idAlias, idNameWidth + 2))
+                            .format(idAlias, widthId + 2))
                 elif idAlias.startswith('stop:'):
                     # << this is a stop tag >>
                     tagType = '>'
                     idAlias = idAlias[5:]
                     idAliasPrinted = TextFormatter.makeBoldRed('{0:{1}}' \
-                            .format(idAlias, idNameWidth + 2))
+                            .format(idAlias, widthId + 2))
                 elif idAlias.startswith('event:'):
                     # << this is an event tag >>
                     tagType = '!'
                     idAlias = idAlias[6:]
                     idAliasPrinted = TextFormatter.makeBoldYellow('{0:{1}}' \
-                            .format(idAlias, idNameWidth + 2))
+                            .format(idAlias, widthId + 2))
                 elif idAlias.startswith('data:'):
                     # << this is a data tag >>
                     tagType = 'D'
                     idAlias = idAlias[5:]
                     idAliasPrinted = TextFormatter.makeBoldBlue('{0:{1}}' \
-                            .format(idAlias, idNameWidth + 2))
+                            .format(idAlias, widthId + 2))
                 else:
                     # << tag is in dictionary but its type is unknown >>
                     tagType = '?'                    
@@ -182,24 +197,21 @@ class MicrotagList(object):
                 # << tag is not in dictionary >>
                 tagType = '?'                    
                 idAlias = '[0x{0:04X}]'.format(tag.id)
-                idAliasPrinted = '{0:{1}}'.format(idAlias, idNameWidth + 2)
+                idAliasPrinted = '{0:{1}}'.format(idAlias, widthId + 2)
 
             line += tagType + ' ' + idAliasPrinted
         
             # ===== tag content, i.e. time or data =====  
 
-
             if tagType in '<>!':
-                time = self.dataToTime(tag.data)
-                content = '{0:,.{2}f} {1}'.format(time[0], time[1], time[2])
-            elif tagType == 'D':
-                content = '[ 0x{0:08X} ]'.format(tag.data)
-            line += '{0:>20}  '.format(content)
-
-
+                line += '{0:>20}  '.format(self.dataToTimeStr(tag.data))
+            else:
+                line += TextFormatter.makeBoldBlue('{0:>20}  ' \
+                        .format('[ 0x{0:08X} ]'.format(tag.data)))
+        
+            # ===== start/stop tag matching =====  
           
             if tagType == '<':
-
 
                 # add indeces of start tags to list of unmatched start tags
                 unmatchedStarts += [i]
@@ -214,13 +226,12 @@ class MicrotagList(object):
                         if len(matchingStarts) > 0 else None
 
                 if matchingStart is not None:
-                    line += '[{0:{1}}]---({2:^{3}})--->[{4:{1}}]  '.format(matchingStart, 5, idAlias, idNameWidth, i)
-
-                    tStart = self.dataToTime(self.microtags[matchingStart].data)
-                    tStop = self.dataToTime(tag.data)
-                    line += '{0:,.{2}f} {1}'.format(tStop[0] - tStart[0], tStop[1], tStop[2])
-
-
+                    # matching string
+                    line += '[ {0:{1}} ]---({2:^{3}})--->[ {4:{1}} ]' \
+                            .format(matchingStart, widthIndex, idAlias, widthId, i)
+                    # time difference
+                    line += '{0:>20}'.format(self.dataToTimeDiffStr(
+                            self.microtags[matchingStart].data, tag.data))
 
             lines += [line]
 
@@ -273,16 +284,15 @@ def main(argv):
         return
 
     idDict = {
-        0x0000 : 'start:Delay',
-        0x4000 : 'stop:Delay',
-        0x0001 : 'start:printf',
-        0x4001 : 'stop:printf',
-        0x0002 : 'start:Single Call',
-        0x4002 : 'data:Single Call'
+        0x0000 : 'start:Direct',
+        0x0001 : 'stop:Direct',
+        0x0002 : 'start:Loop',
+        0x0003 : 'stop:Loop',
+        0x1000 : 'data:Counts'
     }
 
     # read input file
-    microtags = MicrotagList(idDict, lambda c: (c / 84E6, 's', 3))
+    microtags = MicrotagList(idDict) #, lambda c: (c / 84E6, 's', 3))
 
     try:
         n = microtags.importFromFile(filename)
