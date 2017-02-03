@@ -17,6 +17,24 @@ class Microtag(object):
             raise Exception('Undefined microtag')
         return '{0:04X}:{1:08X}'.format(self.id, self.data)
 
+    def isStartTag(self):
+        return True if self.id >= 0x0000 and self.id <= 0x3FFF else False
+
+    def isStopTag(self):
+        return True if self.id >= 0x4000 and self.id <= 0x7FFF else False
+
+    def isEventTag(self):
+        return True if self.id >= 0x8000 and self.id <= 0xBFFF else False
+
+    def isDataTag(self):
+        return True if self.id >= 0xC000 and self.id <= 0xEFFF else False
+
+    def isTickBasedTag(self):
+        if self.isStartTag() or self.isStopTag() or self.isEventTag():
+            return True
+        else:
+            return False
+
     def importFromCode(self, code):
 
         # code must be a string of length 8
@@ -38,14 +56,40 @@ class Microtag(object):
 #
 class MicrotagList(object):
 
-    def __init__(self):
+    def __init__(self, idDict=None, tickToTime=None):
         self.microtags = []
+        self.idDict = idDict if idDict is not None else {}
+        self.tickToTime = tickToTime
 
     def __len__(self):
         return len(self.microtags)
 
     def __str__(self):
-        return '\n'.join([str(tag) for tag in self.microtags])
+        lines = []
+
+        idNameWidth = max([len(s) for s in self.idDict.values()])
+
+        for i, tag in enumerate(self.microtags):
+            line = '[{0:{1}}] '.format(i, 5)
+
+            if self.idDict is not None:
+                line += '{0:{1}}'.format(self.idDict.get(tag.id, ''), idNameWidth)
+
+            if tag.isStartTag():
+                line += 'Start({0:04X}) '.format(tag.id)
+            elif tag.isStopTag():
+                line += 'Stop ({0:04X}) '.format(tag.id)
+            elif tag.isEventTag():
+                line += 'Event({0:04X}) '.format(tag.id)
+            elif tag.isDataTag():
+                line += 'Data ({0:04X}) '.format(tag.id)
+
+            if tag.isTickBasedTag() and self.tickToTime is not None:
+                line += '{0} s'.format(self.tickToTime(tag.data))
+
+            lines += [line]
+
+        return '\n'.join(lines)
 
     def __iter__(self):
         return iter(self.microtags)
@@ -94,7 +138,7 @@ def main(argv):
         return
 
     # read input file
-    microtags = MicrotagList()
+    microtags = MicrotagList({ 0x0000 : 'Delay', 0x8000 : 'Event' }, lambda c: c / 84E6)
 
     try:
         n = microtags.importFromFile(filename)

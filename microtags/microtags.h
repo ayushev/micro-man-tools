@@ -45,8 +45,12 @@ typedef void (*microtags_send_byte_t)(uint8_t byte);
 /* Function to set a ticks-based microtag, i.e. write a microtag to the buffer */
 void microtags_set_ticks(uint_fast16_t id);
 
+#define MICROTAGS_SET_TICKS(id) microtags_set_ticks(id)
+
 /* Function to set a data-based microtag, i.e. write a microtag to the buffer */
 void microtags_set_data(uint_fast16_t id, uint_fast32_t data);
+
+#define MICROTAGS_SET_DATA(id, data) microtags_set_data(id, data)
 
 /* Function to send out all microtags from the buffer and clear the buffer */
 void microtags_flush_text(microtags_send_byte_t microtags_send_byte);
