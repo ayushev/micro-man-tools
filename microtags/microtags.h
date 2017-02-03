@@ -27,6 +27,7 @@
 
 #include <stdint.h>
 
+
 /* definition of a single microtag */
 typedef struct {
 
@@ -49,6 +50,9 @@ void microtags_set_data(uint_fast16_t id, uint_fast32_t data);
 
 /* Function to send out all microtags from the buffer and clear the buffer */
 void microtags_flush_text(microtags_send_byte_t microtags_send_byte);
+
+/* Function to clear the buffer */
+void microtags_clear(void);
 
 
 #endif

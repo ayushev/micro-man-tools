@@ -126,8 +126,17 @@ void microtags_flush_text(microtags_send_byte_t microtags_send_byte) {
 	    }
 
         /* clear the buffer */
-	    n_microtags = 0;
+	    microtags_clear();
     }
 }
 
+
+/*
+ * Function to clear the buffer
+ * ___________________________________________________________________________
+ */
+void microtags_clear(void) {
+
+    n_microtags = 0;
+}
 
