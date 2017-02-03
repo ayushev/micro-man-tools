@@ -83,14 +83,24 @@ class TextFormatter(object):
 #
 class Microtag(object):
 
-    def __init__(self):
-        self.data = None
-        self.id = None
+    def __init__(self, microtag=None):
+        if microtag is None:
+            self.tagData = None
+            self.tagId = None
+        else:
+            self.tagData = microtag.getTagData()
+            self.tagId = microtag.getTagId()
 
     def __str__(self):
-        if self.data is None or self.id is None:
+        if self.tagData is None or self.tagId is None:
             raise Exception('Undefined microtag')
-        return '{0:04X}:{1:08X}'.format(self.id, self.data)
+        return '{0:04X}:{1:08X}'.format(self.tagId, self.tagData)
+
+    def getTagData(self):
+        return self.tagData
+
+    def getTagId(self):
+        return self.tagId
 
     def importFromCode(self, code):
 
@@ -100,12 +110,94 @@ class Microtag(object):
 
         # extract data and id from base64-encoded tag
         hexCode = code.decode('base64').encode('hex')
-        self.data = int(hexCode[0:8], base = 16)
-        self.id = int(hexCode[8:12], base = 16)
+        self.tagData = int(hexCode[0:8], base = 16)
+        self.tagId = int(hexCode[8:12], base = 16)
 
     def exportCode(self):
-        hexCode = '{0:08X}{1:04X}'.format(self.data, self.id)
+        hexCode = '{0:08X}{1:04X}'.format(self.tagData, self.tagId)
         return hexCode.encode('base64')
+
+
+#
+# _____________________________________________________________________________
+#
+class MicrotagUntyped(Microtag):
+
+    def __init__(self, tag=None, idAlias=None):
+        Microtag.__init__(self, tag)
+        self.idAlias = idAlias
+        self.index = None
+
+    def setIdAlias(self, idAlias):
+        self.idAlias = idAlias
+
+    def getIdAlias(self):
+        return self.idAlias
+
+    def setIndex(self, index):
+        self.index = index
+
+    def getIndex(self):
+        return self.index
+
+
+#
+# _____________________________________________________________________________
+#
+class MicrotagTickBased(MicrotagUntyped):
+
+    def __init__(self, tag=None, idAlias=None):
+        MicrotagUntyped.__init__(self, tag, idAlias)
+
+
+#
+# _____________________________________________________________________________
+#
+class MicrotagStart(MicrotagTickBased):
+
+    def __init__(self, tag=None, idAlias=None):
+        MicrotagTickBased.__init__(self, tag, idAlias)
+        self.stopTagIndex = None
+
+    def setStopTagIndex(self, index):
+        self.stopTagIndex = index
+
+    def getStopTagIndex(self):
+        return self.stopTagIndex
+
+
+#
+# _____________________________________________________________________________
+#
+class MicrotagStop(MicrotagTickBased):
+
+    def __init__(self, tag=None, idAlias=None):
+        MicrotagTickBased.__init__(self, tag, idAlias)
+        self.startTagIndex = None
+
+    def setStartTagIndex(self, index):
+        self.startTagIndex = index
+
+    def getStartTagIndex(self):
+        return self.startTagIndex
+
+
+#
+# _____________________________________________________________________________
+#
+class MicrotagEvent(MicrotagTickBased):
+
+    def __init__(self, tag=None, idAlias=None):
+        MicrotagTickBased.__init__(self, tag, idAlias)
+
+
+#
+# _____________________________________________________________________________
+#
+class MicrotagData(MicrotagUntyped):
+
+    def __init__(self, tag=None, idAlias=None):
+        MicrotagUntyped.__init__(self, tag, idAlias)
 
 
 #
@@ -114,7 +206,8 @@ class Microtag(object):
 class MicrotagList(object):
 
     def __init__(self, idDict=None, dataToTime=None):
-        self.microtags = []
+        self.rawTags = []
+        self.analysedTags = None
         self.idDict = idDict if idDict is not None else {}
 
         # conversion function from data (ticks) to time
@@ -134,8 +227,63 @@ class MicrotagList(object):
         return '{0:,.{2}f} {1}'.format(
                 timeStop[0] - timeStart[0], timeStop[1], timeStop[2])
 
+    def getRawTags(self):
+        return self.rawTags
+
+    def getAnalysedTags(self):
+        return self.analysedTags
+
+    def analyse(self):
+
+        # start off with an empty list of analysed microtags
+        self.analysedTags = []
+
+        # a list of indices referring to unmatched start tags
+        unmatchedStarts = []
+
+        # iterate over all raw microtags
+        for i, tag in enumerate(self.getRawTags()):
+
+            if tag.getTagId() in self.idDict:
+
+                # microtag id alias from dictionary
+                idAlias = self.idDict[tag.tagId]
+
+                # extract microtag type (start, stop, event, data)
+                if idAlias.startswith('start:'):
+                    analysedTag = MicrotagStart(tag, idAlias[6:])
+                elif idAlias.startswith('stop:'):
+                    analysedTag = MicrotagStop(tag, idAlias[5:])
+                elif idAlias.startswith('event:'):
+                    analysedTag = MicrotagEvent(tag, idAlias[6:])
+                elif idAlias.startswith('data:'):
+                    analysedTag = MicrotagData(tag, idAlias[5:])
+                else:
+                    analysedTag = MicrotagUntyped(tag, idAlias)
+
+            else:
+                analysedTag = MicrotagUntyped(tag)
+
+          
+            if isinstance(analysedTag, MicrotagStart):
+
+                # add indeces of start tags to list of unmatched start tags
+                unmatchedStarts += [i]
+
+            elif isinstance(analysedTag, MicrotagStop):
+
+                # find corresponding start tag
+                matchingStarts = [j for j in unmatchedStarts[::-1] \
+                        if isinstance(self.getAnalysedTags()[j], MicrotagStart) \
+                        and self.getAnalysedTags()[j].getIdAlias() == analysedTag.getIdAlias()]
+                if len(matchingStarts) > 0:
+                    analysedTag.setStartTagIndex(matchingStarts[0])
+                    self.getAnalysedTags()[matchingStarts[0]].setStopTagIndex(i)
+
+            self.analysedTags += [analysedTag]
+
     def __len__(self):
-        return len(self.microtags)
+        return len(self.rawTags)
 
     def __str__(self):
 
@@ -148,12 +296,9 @@ class MicrotagList(object):
                 for s in self.idDict.values()] + [8])
 
         # determine length of highest tag index
-        widthIndex = len('{0}'.format(len(self.microtags)))
+        widthIndex = len('{0}'.format(len(self.getAnalysedTags())))
 
-        # a list of indices referring to unmatched start tags
-        unmatchedStarts = []
-
-        for i, tag in enumerate(self.microtags):
+        for i, tag in enumerate(self.getAnalysedTags()):
 
             # ===== tag index =====
 
@@ -161,100 +306,79 @@ class MicrotagList(object):
 
             # ===== tag id or id alias =====
 
-            if tag.id in self.idDict:
-                # tag id alias from dictionary
-                idAlias = self.idDict[tag.id]
-                # extract tag type (start, stop, event, data)
-                if idAlias.startswith('start:'):
-                    # << this is a start tag >>
-                    tagType = '<'
-                    idAlias = idAlias[6:]
-                    idAliasPrinted = TextFormatter.makeBoldGreen('{0:{1}}' \
-                            .format(idAlias, widthId + 2))
-                elif idAlias.startswith('stop:'):
-                    # << this is a stop tag >>
-                    tagType = '>'
-                    idAlias = idAlias[5:]
-                    idAliasPrinted = TextFormatter.makeBoldRed('{0:{1}}' \
-                            .format(idAlias, widthId + 2))
-                elif idAlias.startswith('event:'):
-                    # << this is an event tag >>
-                    tagType = '!'
-                    idAlias = idAlias[6:]
-                    idAliasPrinted = TextFormatter.makeBoldYellow('{0:{1}}' \
-                            .format(idAlias, widthId + 2))
-                elif idAlias.startswith('data:'):
-                    # << this is a data tag >>
-                    tagType = 'D'
-                    idAlias = idAlias[5:]
-                    idAliasPrinted = TextFormatter.makeBoldBlue('{0:{1}}' \
-                            .format(idAlias, widthId + 2))
-                else:
-                    # << tag is in dictionary but its type is unknown >>
-                    tagType = '?'                    
-                    idAliasPrinted = idAlias
+            if isinstance(tag, MicrotagStart):
+                tagType = '<'
+                idAlias = TextFormatter.makeBoldGreen('{0:{1}}' \
+                        .format(tag.getIdAlias(), widthId + 2))
+            elif isinstance(tag, MicrotagStop):
+                tagType = '>'
+                idAlias = TextFormatter.makeBoldRed('{0:{1}}' \
+                        .format(tag.getIdAlias(), widthId + 2))
+            elif isinstance(tag, MicrotagEvent):
+                tagType = '!'
+                idAlias = TextFormatter.makeBoldYellow('{0:{1}}' \
+                        .format(tag.getIdAlias(), widthId + 2))
+            elif isinstance(tag, MicrotagData):
+                tagType = 'D'
+                idAlias = TextFormatter.makeBoldBlue('{0:{1}}' \
+                        .format(tag.getIdAlias(), widthId + 2))
             else:
-                # << tag is not in dictionary >>
                 tagType = '?'                    
-                idAlias = '[0x{0:04X}]'.format(tag.id)
-                idAliasPrinted = '{0:{1}}'.format(idAlias, widthId + 2)
+                if tag.getIdAlias() is not None:
+                    idAlias = tag.getIdAlias()
+                else:
+                    idAlias = '[0x{0:04X}]'.format(tag.getTagId())
+                idAlias = '{0:{1}}'.format(idAlias, widthId + 2)
 
-            line += tagType + ' ' + idAliasPrinted
+            line += tagType + ' ' + idAlias
         
             # ===== tag content, i.e. time or data =====  
 
-            if tagType in '<>!':
-                line += '{0:>20}  '.format(self.dataToTimeStr(tag.data))
+            if isinstance(tag, MicrotagTickBased):
+                line += '{0:>20}  '.format(self.dataToTimeStr(tag.tagData))
             else:
                 line += TextFormatter.makeBoldBlue('{0:>20}  ' \
-                        .format('[ 0x{0:08X} ]'.format(tag.data)))
+                        .format('[ 0x{0:08X} ]  '.format(tag.tagData)))
         
             # ===== start/stop tag matching =====  
-          
-            if tagType == '<':
+        
+            if isinstance(tag, MicrotagStart):
 
-                # add indeces of start tags to list of unmatched start tags
-                unmatchedStarts += [i]
+                # matching string
+                line += '--->[ {0:{1}} ]' \
+                        .format(tag.getStopTagIndex(), widthIndex)
 
-            elif tagType == '>':
+            elif isinstance(tag, MicrotagStop):
 
-                # find corresponding start tag
-                matchingStarts = [j for j in unmatchedStarts[::-1] \
-                        if self.idDict[self.microtags[j].id] \
-                                == 'start:{0}'.format(idAlias)]
-                matchingStart = matchingStarts[0] \
-                        if len(matchingStarts) > 0 else None
-
-                if matchingStart is not None:
-                    # matching string
-                    line += '[ {0:{1}} ]---({2:^{3}})--->[ {4:{1}} ]' \
-                            .format(matchingStart, widthIndex, idAlias, widthId, i)
-                    # time difference
-                    line += '{0:>20}'.format(self.dataToTimeDiffStr(
-                            self.microtags[matchingStart].data, tag.data))
+                # matching string
+                line += '[ {0:{1}} ]---({2:^{3}})--->[ {4:{1}} ]' \
+                        .format(tag.getStartTagIndex(), widthIndex, tag.getIdAlias(), widthId, i)
+                # time difference
+                line += '{0:>20}'.format(self.dataToTimeDiffStr(
+                        self.getAnalysedTags()[tag.getStartTagIndex()].getTagData(), tag.getTagData()))
 
             lines += [line]
 
         return '\n'.join(lines)
 
     def __iter__(self):
-        return iter(self.microtags)
+        return iter(self.rawTags)
 
     def __getitem__(self, index):
         if isinstance(index, int):
-            return self.microtags[index]
+            return self.rawTags[index]
 
     def importFromCodes(self, codes):
-        lenBefore = len(self.microtags)
+        lenBefore = len(self.rawTags)
         for code in codes.split('\n'):
             try:
                 tag = Microtag()
                 tag.importFromCode(code)
-                self.microtags += [tag]
+                self.rawTags += [tag]
             except:
                 pass
         # return the number of tags imported
-        return len(self.microtags) - lenBefore
+        return len(self.rawTags) - lenBefore
 
     def importFromFile(self, filename):
         f = open(filename, 'r')
@@ -300,6 +424,8 @@ def main(argv):
     except:
         print "Failed to read/parse input file. Stopping."
         return
+
+    microtags.analyse()
 
     print(microtags)
 
