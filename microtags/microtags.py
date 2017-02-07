@@ -267,7 +267,7 @@ class MicrotagList(object):
           
             if isinstance(analysedTag, MicrotagStart):
 
-                # add indeces of start tags to list of unmatched start tags
+                # add indices of start tags to list of unmatched start tags
                 unmatchedStarts += [i]
 
             elif isinstance(analysedTag, MicrotagStop):
@@ -277,6 +277,9 @@ class MicrotagList(object):
                         if isinstance(self.getAnalysedTags()[j], MicrotagStart) \
                         and self.getAnalysedTags()[j].getIdAlias() == analysedTag.getIdAlias()]
                 if len(matchingStarts) > 0:
+
+                    del unmatchedStarts[unmatchedStarts.index(matchingStarts[0])]
+
                     analysedTag.setStartTagIndex(matchingStarts[0])
                     self.getAnalysedTags()[matchingStarts[0]].setStopTagIndex(i)
 
