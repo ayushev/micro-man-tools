@@ -98,10 +98,10 @@ size_t ringbuffer_write(ringbuffer_t* rb, uint8_t* data, size_t len) {
             /* copy data until end of buffer */
             memcpy(rb->buffer + rb->iw, data, len);
 
-            /* advance write pointer */
+            /* advance write index */
             rb->iw += len;
             if (len == tmpLen) {
-                /* here: rb->iw == rb->size, so wrap write pointer */
+                /* here: rb->iw == rb->size, so wrap write index */
                 rb->iw = 0;
             }
 
@@ -110,7 +110,7 @@ size_t ringbuffer_write(ringbuffer_t* rb, uint8_t* data, size_t len) {
             /* copy data until end of buffer */
             memcpy(rb->buffer + rb->iw, data, tmpLen);
 
-            /* write pointer implicitly wrapped */
+            /* write index implicitly wrapped */
             rb->iw = len - tmpLen;
 
             /* copy remaining data to beginning of buffer */
@@ -140,26 +140,27 @@ size_t ringbuffer_read(ringbuffer_t* rb, uint8_t* data, size_t len) {
         rb->len -= len;
         lenRead = len;
 
-        /* assuming read pointer never exceeds size */
+        /* assuming read index never exceeds size */
         size_t tmpLen = (size_t)(rb->size - rb->ir);
         if (len <= tmpLen) {
 
             /* copy data until end of buffer */
             memcpy(data, rb->buffer + rb->ir, len);
 
-            /* advance read pointer */
+            /* advance read index */
             rb->ir += len;
             if (len == tmpLen) {
-                /* here: rb->ir == rb->size, so wrap read pointer */
+                /* here: rb->ir == rb->size, so wrap read index */
                 rb->ir = 0;
             }
 
         } else {
 
-            /* copy data until end of buffer (assuming write index never exceeds size) */
+            /* copy data until end of buffer (assuming
+             * write index never exceeds size) */
             memcpy(data, rb->buffer + rb->ir, tmpLen);
 
-            /* read pointer implicitly wrapped */
+            /* read index implicitly wrapped */
             rb->ir = len - tmpLen;
 
             /* copy remaining data to beginning of buffer */
@@ -188,7 +189,7 @@ size_t ringbuffer_sniff(ringbuffer_t* rb, uint8_t* data, size_t len) {
         }
         lenSniffed = len;
 
-        /* assuming read pointer never exceeds size */
+        /* assuming read index never exceeds size */
         size_t tmpLen = (size_t)(rb->size - rb->ir);
         if (len <= tmpLen) {
 
@@ -237,14 +238,14 @@ size_t ringbuffer_sniff_ahead(
         }
         lenSniffed = len;
 
-        /* the "virtual" read pointer of the ring buffer's
+        /* the "virtual" read index of the ring buffer's
          * after considering data to disregard (ahead) */
         size_t vir = rb->ir + ahead;
         if (vir >= rb->size) {
             vir -= rb->size;
         }
 
-        /* assuming read pointer never exceeds size */
+        /* assuming read index never exceeds size */
         size_t tmpLen = (size_t)(rb->size - vir);
         if (len <= tmpLen) {
 
@@ -284,20 +285,20 @@ size_t ringbuffer_discard(ringbuffer_t* rb, size_t len) {
         rb->len -= len;
         lenDiscarded = len;
 
-        /* assuming read pointer never exceeds size */
+        /* assuming read index never exceeds size */
         size_t tmpLen = (size_t)(rb->size - rb->ir);
         if (len <= tmpLen) {
 
-            /* advance read pointer */
+            /* advance read index */
             rb->ir += len;
             if (len == tmpLen) {
-                /* here: rb->ir == rb->size, so wrap read pointer */
+                /* here: rb->ir == rb->size, so wrap read index */
                 rb->ir = 0;
             }
 
         } else {
 
-            /* read pointer implicitly wrapped */
+            /* read index implicitly wrapped */
             rb->ir = len - tmpLen;
 
         }
