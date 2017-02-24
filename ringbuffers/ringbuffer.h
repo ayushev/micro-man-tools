@@ -77,4 +77,7 @@ size_t ringbuffer_write_frame(ringbuffer_t* ringbuf, uint8_t* frame, size_t len)
 /* TODO: Add description */
 size_t ringbuffer_read_frame(ringbuffer_t* ringbuf, uint8_t* frame, size_t len);
 
+/* TODO: Add description */
+size_t ringbuffer_discard_frame(ringbuffer_t* rb);
+
 #endif

@@ -306,3 +306,30 @@ size_t ringbuffer_read_frame(ringbuffer_t* rb, uint8_t* frame, size_t len) {
     return lenRead;
 }
 
+
+/*
+ * ___________________________________________________________________________
+ */
+size_t ringbuffer_discard_frame(ringbuffer_t* rb) {
+
+    /* the number of bytes from frame discarded from ring buffer */
+    size_t lenDiscarded = 0;
+
+    if (rb != 0) {
+
+        size_t lenHeader = 0;
+        
+        if (ringbuffer_sniff(rb, (uint8_t*)&lenHeader, sizeof(size_t))
+                == sizeof(size_t)) {
+
+            if (lenHeader + sizeof(size_t) <= rb->len) {
+
+                /* discard frame */
+                lenDiscarded = ringbuffer_discard(rb, lenHeader + sizeof(size_t));
+            }
+        }
+    }
+
+    return lenDiscarded;
+}
+
