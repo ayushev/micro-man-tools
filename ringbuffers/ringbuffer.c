@@ -82,7 +82,8 @@ size_t ringbuffer_write(ringbuffer_t* rb, uint8_t* data, size_t len) {
 
     if (rb != 0 && data != 0) {
 
-        /* don't write more than there is space (assuming len never exceeds size) */
+        /* don't write more than there is space
+         * (assuming len never exceeds size) */
         size_t space = (size_t)(rb->size - rb->len);
         if (len > space) {
             len = space;
@@ -90,7 +91,7 @@ size_t ringbuffer_write(ringbuffer_t* rb, uint8_t* data, size_t len) {
         rb->len += len;
         lenWritten = len;
 
-        /* assuming iw never exceeds size */
+        /* assuming write index never exceeds size */
         size_t tmpLen = (size_t)(rb->size - rb->iw);
         if (len <= tmpLen) {
 
@@ -155,7 +156,7 @@ size_t ringbuffer_read(ringbuffer_t* rb, uint8_t* data, size_t len) {
 
         } else {
 
-            /* copy data until end of buffer (assuming iw never exceeds size) */
+            /* copy data until end of buffer (assuming write index never exceeds size) */
             memcpy(data, rb->buffer + rb->ir, tmpLen);
 
             /* read pointer implicitly wrapped */
@@ -196,7 +197,8 @@ size_t ringbuffer_sniff(ringbuffer_t* rb, uint8_t* data, size_t len) {
 
         } else {
 
-            /* copy data until end of buffer (assuming iw never exceeds size) */
+            /* copy data until end of buffer (assuming
+             * write index never exceeds size) */
             memcpy(data, rb->buffer + rb->ir, tmpLen);
 
             /* copy remaining data to beginning of buffer */
@@ -251,7 +253,8 @@ size_t ringbuffer_sniff_ahead(
 
         } else {
 
-            /* copy data until end of buffer (assuming iw never exceeds size) */
+            /* copy data until end of buffer (assuming
+             * write index never exceeds size) */
             memcpy(data, rb->buffer + vir, tmpLen);
 
             /* copy remaining data to beginning of buffer */
@@ -372,17 +375,17 @@ size_t ringbuffer_sniff_frame(ringbuffer_t* rb, uint8_t* frame, size_t len) {
 
     if (rb != 0) {
 
+    	/* length of frame read from header in ring buffer */
         size_t lenHeader = 0;
         
-        if (ringbuffer_sniff(rb, (uint8_t*)&lenHeader, sizeof(size_t))
-                == sizeof(size_t)) {
-
-            if (lenHeader + sizeof(size_t) <= rb->len
-                    && len >= lenHeader) {
+        if ((ringbuffer_sniff(rb, (uint8_t*)&lenHeader,
+        		sizeof(size_t)) == sizeof(size_t))
+        				&& (lenHeader + sizeof(size_t) <= rb->len)
+						&& (len >= lenHeader)) {
                 
-                /* sniff the actual frame */
-                lenSniffed = ringbuffer_sniff_ahead(rb, sizeof(size_t), frame, lenHeader);
-            }
+			/* sniff the actual frame */
+			lenSniffed = ringbuffer_sniff_ahead(
+					rb, sizeof(size_t), frame, lenHeader);
         }
     }
 
@@ -402,14 +405,12 @@ size_t ringbuffer_discard_frame(ringbuffer_t* rb) {
 
         size_t lenHeader = 0;
         
-        if (ringbuffer_sniff(rb, (uint8_t*)&lenHeader, sizeof(size_t))
-                == sizeof(size_t)) {
+        if ((ringbuffer_sniff(rb, (uint8_t*)&lenHeader,
+        		sizeof(size_t)) == sizeof(size_t))
+        				&& ((lenHeader + sizeof(size_t)) <= rb->len)) {
 
-            if (lenHeader + sizeof(size_t) <= rb->len) {
-
-                /* discard frame */
-                lenDiscarded = ringbuffer_discard(rb, lenHeader + sizeof(size_t));
-            }
+			/* discard frame */
+			lenDiscarded = ringbuffer_discard(rb, lenHeader + sizeof(size_t));
         }
     }
 
