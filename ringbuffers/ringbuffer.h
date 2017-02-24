@@ -68,6 +68,10 @@ size_t ringbuffer_read(ringbuffer_t* ringbuf, uint8_t* data, size_t len);
 size_t ringbuffer_sniff(ringbuffer_t* ringbuf, uint8_t* data, size_t len);
 
 /* TODO: Add description */
+size_t ringbuffer_sniff_ahead(
+        ringbuffer_t* rb, size_t ahead, uint8_t* data, size_t len);
+
+/* TODO: Add description */
 size_t ringbuffer_discard(ringbuffer_t* ringbuf, size_t len);
 
 
@@ -76,6 +80,9 @@ size_t ringbuffer_write_frame(ringbuffer_t* ringbuf, uint8_t* frame, size_t len)
 
 /* TODO: Add description */
 size_t ringbuffer_read_frame(ringbuffer_t* ringbuf, uint8_t* frame, size_t len);
+
+/* TODO: Add description */
+size_t ringbuffer_sniff_frame(ringbuffer_t* rb, uint8_t* frame, size_t len);
 
 /* TODO: Add description */
 size_t ringbuffer_discard_frame(ringbuffer_t* rb);

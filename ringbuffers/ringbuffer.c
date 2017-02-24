@@ -187,7 +187,7 @@ size_t ringbuffer_sniff(ringbuffer_t* rb, uint8_t* data, size_t len) {
         }
         lenSniffed = len;
 
-        /* assuming ir never exceeds size */
+        /* assuming read pointer never exceeds size */
         size_t tmpLen = (size_t)(rb->size - rb->ir);
         if (len <= tmpLen) {
 
@@ -198,6 +198,61 @@ size_t ringbuffer_sniff(ringbuffer_t* rb, uint8_t* data, size_t len) {
 
             /* copy data until end of buffer (assuming iw never exceeds size) */
             memcpy(data, rb->buffer + rb->ir, tmpLen);
+
+            /* copy remaining data to beginning of buffer */
+            memcpy(data + tmpLen, rb->buffer, len - tmpLen);
+
+        }
+    }
+
+    return lenSniffed;
+}
+
+
+/*
+ * ___________________________________________________________________________
+ */
+size_t ringbuffer_sniff_ahead(
+        ringbuffer_t* rb, size_t ahead, uint8_t* data, size_t len) {
+
+    /* the number of bytes actually sniffed from ring buffer */
+    size_t lenSniffed = 0;
+
+    if (rb != 0 && data != 0) {
+
+        /* the "virtual" length of the ring buffer's content
+         * after considering data to disregard (ahead) */
+        size_t vLen = rb->len;
+        if (ahead < vLen) {
+            vLen -= ahead;
+        } else {
+            vLen = 0;
+        }
+
+        /* don't read more than there is data */
+        if (len > vLen) {
+            len = vLen;
+        }
+        lenSniffed = len;
+
+        /* the "virtual" read pointer of the ring buffer's
+         * after considering data to disregard (ahead) */
+        size_t vir = rb->ir + ahead;
+        if (vir >= rb->size) {
+            vir -= rb->size;
+        }
+
+        /* assuming read pointer never exceeds size */
+        size_t tmpLen = (size_t)(rb->size - vir);
+        if (len <= tmpLen) {
+
+            /* copy data until end of buffer */
+            memcpy(data, rb->buffer + vir, len);
+
+        } else {
+
+            /* copy data until end of buffer (assuming iw never exceeds size) */
+            memcpy(data, rb->buffer + vir, tmpLen);
 
             /* copy remaining data to beginning of buffer */
             memcpy(data + tmpLen, rb->buffer, len - tmpLen);
@@ -226,7 +281,7 @@ size_t ringbuffer_discard(ringbuffer_t* rb, size_t len) {
         rb->len -= len;
         lenDiscarded = len;
 
-        /* assuming ir never exceeds size */
+        /* assuming read pointer never exceeds size */
         size_t tmpLen = (size_t)(rb->size - rb->ir);
         if (len <= tmpLen) {
 
@@ -304,6 +359,34 @@ size_t ringbuffer_read_frame(ringbuffer_t* rb, uint8_t* frame, size_t len) {
     }
 
     return lenRead;
+}
+
+
+/*
+ * ___________________________________________________________________________
+ */
+size_t ringbuffer_sniff_frame(ringbuffer_t* rb, uint8_t* frame, size_t len) {
+
+    /* the number of bytes from frame sniffed from ring buffer */
+    size_t lenSniffed = 0;
+
+    if (rb != 0) {
+
+        size_t lenHeader = 0;
+        
+        if (ringbuffer_sniff(rb, (uint8_t*)&lenHeader, sizeof(size_t))
+                == sizeof(size_t)) {
+
+            if (lenHeader + sizeof(size_t) <= rb->len
+                    && len >= lenHeader) {
+                
+                /* sniff the actual frame */
+                lenSniffed = ringbuffer_sniff_ahead(rb, sizeof(size_t), frame, lenHeader);
+            }
+        }
+    }
+
+    return lenSniffed;
 }
 
 
