@@ -53,6 +53,12 @@ typedef struct {
 void ringbuffer_init(ringbuffer_t* ringbuf, uint8_t* mem, size_t memlen);
 
 /* TODO: Add description */
+size_t ringbuffer_get_len(ringbuffer_t* rb);
+
+/* TODO: Add description */
+size_t ringbuffer_get_space(ringbuffer_t* rb);
+
+/* TODO: Add description */
 size_t ringbuffer_write(ringbuffer_t* ringbuf, uint8_t* data, size_t len);
 
 /* TODO: Add description */
@@ -64,5 +70,11 @@ size_t ringbuffer_sniff(ringbuffer_t* ringbuf, uint8_t* data, size_t len);
 /* TODO: Add description */
 size_t ringbuffer_discard(ringbuffer_t* ringbuf, size_t len);
 
+
+/* TODO: Add description */
+size_t ringbuffer_write_frame(ringbuffer_t* ringbuf, uint8_t* frame, size_t len);
+
+/* TODO: Add description */
+size_t ringbuffer_read_frame(ringbuffer_t* ringbuf, uint8_t* frame, size_t len);
 
 #endif
