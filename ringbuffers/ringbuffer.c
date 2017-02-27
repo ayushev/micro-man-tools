@@ -440,3 +440,35 @@ size_t ringbuffer_discard_frame(ringbuffer_t* rb) {
     return lenDiscarded;
 }
 
+
+/*
+ * ___________________________________________________________________________
+ */
+size_t ringbuffer_write_frame_with_header(ringbuffer_t* rb,
+		uint8_t* header, size_t hlen, uint8_t* frame, size_t flen) {
+
+    /* the total number of bytes written to ring buffer */
+    size_t n = 0;
+
+    if (rb != 0) {
+
+        /* only write frame if there is enough space for
+         * the full frame(assuming len never exceeds size) */
+        if ((sizeof(size_t)*2 + hlen + flen) <= (size_t)(rb->size - rb->len)) {
+
+            /* write header length */
+        	n += ringbuffer_write(rb, (uint8_t*)&hlen, sizeof(size_t));
+
+            /* write header */
+            n += ringbuffer_write(rb, header, hlen);
+
+            /* write frame length */
+            n += ringbuffer_write(rb, (uint8_t*)&flen, sizeof(size_t));
+
+            /* write the actual frame */
+            n += ringbuffer_write(rb, frame, flen);
+        }
+    }
+
+    return n;
+}
