@@ -75,6 +75,19 @@ size_t ringbuffer_get_space(ringbuffer_t* rb) {
 /*
  * ___________________________________________________________________________
  */
+void ringbuffer_clear(ringbuffer_t* rb) {
+
+    if (rb != 0) {
+        rb->len = 0;
+        rb->iw = 0;
+        rb->ir = 0;
+    }
+}
+
+
+/*
+ * ___________________________________________________________________________
+ */
 size_t ringbuffer_write(ringbuffer_t* rb, uint8_t* data, size_t len) {
 
     /* the number of bytes actually written to ring buffer */
@@ -215,19 +228,19 @@ size_t ringbuffer_sniff(ringbuffer_t* rb, uint8_t* data, size_t len) {
 /*
  * ___________________________________________________________________________
  */
-size_t ringbuffer_sniff_ahead(
-        ringbuffer_t* rb, size_t ahead, uint8_t* data, size_t len) {
+size_t ringbuffer_sniff_offset(
+        ringbuffer_t* rb, size_t offset, uint8_t* data, size_t len) {
 
     /* the number of bytes actually sniffed from ring buffer */
     size_t lenSniffed = 0;
 
     if (rb != 0 && data != 0) {
 
-        /* the "virtual" length of the ring buffer's content
-         * after considering data to disregard (ahead) */
+        /* vLen is the "virtual" length of the ring buffer's
+         *  content after considering data to disregard (offset) */
         size_t vLen = rb->len;
-        if (ahead < vLen) {
-            vLen -= ahead;
+        if (offset < vLen) {
+            vLen -= offset;
         } else {
             vLen = 0;
         }
@@ -239,8 +252,8 @@ size_t ringbuffer_sniff_ahead(
         lenSniffed = len;
 
         /* the "virtual" read index of the ring buffer's
-         * after considering data to disregard (ahead) */
-        size_t vir = rb->ir + ahead;
+         * after considering data to disregard (offset) */
+        size_t vir = rb->ir + offset;
         if (vir >= rb->size) {
             vir -= rb->size;
         }
@@ -385,7 +398,7 @@ size_t ringbuffer_sniff_frame(ringbuffer_t* rb, uint8_t* frame, size_t len) {
 						&& (len >= lenHeader)) {
                 
 			/* sniff the actual frame */
-			lenSniffed = ringbuffer_sniff_ahead(
+			lenSniffed = ringbuffer_sniff_offset(
 					rb, sizeof(size_t), frame, lenHeader);
         }
     }
