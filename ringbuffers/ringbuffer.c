@@ -189,6 +189,15 @@ size_t ringbuffer_read(ringbuffer_t* rb, uint8_t* data, size_t len) {
 /*
  * ___________________________________________________________________________
  */
+size_t ringbuffer_read_memory(ringbuffer_t* rb, uint8_t** data, size_t len) {
+
+	return 0;
+}
+
+
+/*
+ * ___________________________________________________________________________
+ */
 size_t ringbuffer_sniff(ringbuffer_t* rb, uint8_t* data, size_t len) {
 
     /* the number of bytes actually sniffed from ring buffer */
