@@ -453,20 +453,58 @@ size_t ringbuffer_write_frame_with_header(ringbuffer_t* rb,
     if (rb != 0) {
 
         /* only write frame if there is enough space for
-         * the full frame(assuming len never exceeds size) */
-        if ((sizeof(size_t)*2 + hlen + flen) <= (size_t)(rb->size - rb->len)) {
+         * the full frame (assuming len never exceeds size) */
+        if ((sizeof(size_t) + hlen + flen) <= (size_t)(rb->size - rb->len)) {
 
-            /* write header length */
-        	n += ringbuffer_write(rb, (uint8_t*)&hlen, sizeof(size_t));
+        	/* the total frame length including header */
+        	size_t len = hlen + flen;
+
+            /* prepend and write total frame length */
+            n += ringbuffer_write(rb, (uint8_t*)&len, sizeof(size_t));
 
             /* write header */
             n += ringbuffer_write(rb, header, hlen);
 
-            /* write frame length */
-            n += ringbuffer_write(rb, (uint8_t*)&flen, sizeof(size_t));
-
-            /* write the actual frame */
+            /* write frame */
             n += ringbuffer_write(rb, frame, flen);
+
+        }
+    }
+
+    return n;
+}
+
+
+/*
+ * ___________________________________________________________________________
+ */
+size_t ringbuffer_read_frame_with_header(ringbuffer_t* rb,
+		uint8_t* header, size_t hlen, uint8_t* frame, size_t max_flen) {
+
+    /* the number of frame bytes read from ring buffer */
+    size_t n = 0;
+
+    if (rb != 0) {
+
+    	/* the length of the next frame in the ring buffer */
+        size_t len = 0;
+
+        if (ringbuffer_sniff(rb, (uint8_t*)&len, sizeof(size_t))
+                == sizeof(size_t)) {
+
+            if (len + sizeof(size_t) <= rb->len
+            		&& (hlen + max_flen) >= len) {
+
+                /* discard length (we already know it) */
+                ringbuffer_discard(rb, sizeof(size_t));
+
+                /* the header */
+                ringbuffer_read(rb, header, hlen);
+
+                /* the frame */
+                n = ringbuffer_read(rb, frame, len - hlen);
+
+            }
         }
     }
 

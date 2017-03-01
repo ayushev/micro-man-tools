@@ -98,4 +98,8 @@ size_t ringbuffer_discard_frame(ringbuffer_t* rb);
 size_t ringbuffer_write_frame_with_header(ringbuffer_t* rb,
 		uint8_t* header, size_t hlen, uint8_t* frame, size_t flen);
 
+/* TODO: Add description */
+size_t ringbuffer_read_frame_with_header(ringbuffer_t* rb,
+		uint8_t* header, size_t hlen, uint8_t* frame, size_t max_flen);
+
 #endif
