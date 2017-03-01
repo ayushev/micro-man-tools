@@ -510,3 +510,38 @@ size_t ringbuffer_read_frame_with_header(ringbuffer_t* rb,
 
     return n;
 }
+
+
+/*
+ * ___________________________________________________________________________
+ */
+size_t ringbuffer_sniff_frame_with_header(ringbuffer_t* rb,
+		uint8_t* header, size_t hlen, uint8_t* frame, size_t max_flen) {
+
+    /* the number of frame bytes read from ring buffer */
+    size_t n = 0;
+
+    if (rb != 0) {
+
+    	/* the length of the next frame in the ring buffer */
+        size_t len = 0;
+
+        if (ringbuffer_sniff(rb, (uint8_t*)&len, sizeof(size_t))
+                == sizeof(size_t)) {
+
+            if (len + sizeof(size_t) <= rb->len
+            		&& (hlen + max_flen) >= len) {
+
+                /* the header */
+                ringbuffer_sniff_offset(rb, sizeof(size_t), header, hlen);
+
+                /* the frame */
+                n = ringbuffer_sniff_offset(rb, sizeof(size_t) + hlen,
+                		frame, len - hlen);
+
+            }
+        }
+    }
+
+    return n;
+}
