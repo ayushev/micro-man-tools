@@ -444,6 +444,39 @@ size_t ringbuffer_discard_frame(ringbuffer_t* rb) {
 /*
  * ___________________________________________________________________________
  */
+size_t ringbuffer_count_frames(ringbuffer_t* rb) {
+
+    size_t n = 0;
+
+    if (rb != 0) {
+
+    	size_t flen;
+
+    	size_t len = rb->len;
+    	size_t offset = 0;
+    	while (len > sizeof(size_t)) {
+    		len -= sizeof(size_t);
+    		if (ringbuffer_sniff_offset(rb, offset, (uint8_t*)&flen, sizeof(size_t))
+    				== sizeof(size_t) && flen <= len) {
+    			/* skip this frame */
+        		len -= flen;
+        		offset += sizeof(size_t) + flen;
+        		++n;
+    		} else {
+    			/* something is wrong */
+    			n = 0;
+    			len = 0;
+    		}
+    	}
+    }
+
+    return n;
+}
+
+
+/*
+ * ___________________________________________________________________________
+ */
 size_t ringbuffer_write_frame_with_header(ringbuffer_t* rb,
 		uint8_t* header, size_t hlen, uint8_t* frame, size_t flen) {
 
