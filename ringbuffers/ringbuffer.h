@@ -91,6 +91,9 @@ size_t ringbuffer_read_frame(ringbuffer_t* rb, uint8_t* frame, size_t len);
 size_t ringbuffer_sniff_frame(ringbuffer_t* rb, uint8_t* frame, size_t len);
 
 /* TODO: Add description */
+size_t ringbuffer_sniff_frame_length(ringbuffer_t* rb);
+
+/* TODO: Add description */
 size_t ringbuffer_discard_frame(ringbuffer_t* rb);
 
 /* TODO: Add description */

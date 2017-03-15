@@ -419,6 +419,27 @@ size_t ringbuffer_sniff_frame(ringbuffer_t* rb, uint8_t* frame, size_t len) {
 /*
  * ___________________________________________________________________________
  */
+size_t ringbuffer_sniff_frame_length(ringbuffer_t* rb) {
+
+    /* the length of the next frame in the ring buffer */
+    size_t length = 0;
+
+    if (rb != 0) {
+        if ((ringbuffer_sniff(rb, (uint8_t*)&length,
+        		sizeof(size_t)) != sizeof(size_t))
+        				|| (length + sizeof(size_t) > rb->len)) {
+        	/* no frame or invalid frame */
+        	length = 0;
+        }
+    }
+
+    return length;
+}
+
+
+/*
+ * ___________________________________________________________________________
+ */
 size_t ringbuffer_discard_frame(ringbuffer_t* rb) {
 
     /* the number of bytes from frame discarded from ring buffer */
