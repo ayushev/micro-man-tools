@@ -2,12 +2,10 @@
 
 import sys
 
-
 #
 # _____________________________________________________________________________
 #
 class TextFormatter(object):
-
     useColor = True
 
     strColorEnd = '\033[0m'
@@ -74,7 +72,7 @@ class TextFormatter(object):
 
     @staticmethod
     def indent(str, level=1):
-        lines = [' '*(4 if s else 0)*level + s for s in str.split('\n')]
+        lines = [' ' * (4 if s else 0) * level + s for s in str.split('\n')]
         return '\n'.join(lines)
 
 
@@ -82,7 +80,6 @@ class TextFormatter(object):
 # _____________________________________________________________________________
 #
 class Microtag(object):
-
     def __init__(self, microtag=None):
         if microtag is None:
             self.tagData = None
@@ -90,6 +87,7 @@ class Microtag(object):
         else:
             self.tagData = microtag.getTagData()
             self.tagId = microtag.getTagId()
+            self.name = 'Microtag'
 
     def __str__(self):
         if self.tagData is None or self.tagId is None:
@@ -110,23 +108,26 @@ class Microtag(object):
 
         # extract data and id from base64-encoded tag
         hexCode = code.decode('base64').encode('hex')
-        self.tagData = int(hexCode[0:8], base = 16)
-        self.tagId = int(hexCode[8:12], base = 16)
+        self.tagData = int(hexCode[0:8], base=16)
+        self.tagId = int(hexCode[8:12], base=16)
 
     def exportCode(self):
         hexCode = '{0:08X}{1:04X}'.format(self.tagData, self.tagId)
         return hexCode.encode('base64')
+
+    def className(self):
+        return self.name
 
 
 #
 # _____________________________________________________________________________
 #
 class MicrotagUntyped(Microtag):
-
     def __init__(self, tag=None, idAlias=None):
         Microtag.__init__(self, tag)
         self.idAlias = idAlias
         self.index = None
+        self.name = 'MicrotagUntyped'
 
     def setIdAlias(self, idAlias):
         self.idAlias = idAlias
@@ -145,19 +146,19 @@ class MicrotagUntyped(Microtag):
 # _____________________________________________________________________________
 #
 class MicrotagTickBased(MicrotagUntyped):
-
     def __init__(self, tag=None, idAlias=None):
         MicrotagUntyped.__init__(self, tag, idAlias)
+        self.name = 'MicrotagTickBased'
 
 
 #
 # _____________________________________________________________________________
 #
 class MicrotagStart(MicrotagTickBased):
-
     def __init__(self, tag=None, idAlias=None):
         MicrotagTickBased.__init__(self, tag, idAlias)
         self.stopTagIndex = None
+        self.name = 'MicrotagStart'
 
     def setStopTagIndex(self, index):
         self.stopTagIndex = index
@@ -170,10 +171,10 @@ class MicrotagStart(MicrotagTickBased):
 # _____________________________________________________________________________
 #
 class MicrotagStop(MicrotagTickBased):
-
     def __init__(self, tag=None, idAlias=None):
         MicrotagTickBased.__init__(self, tag, idAlias)
         self.startTagIndex = None
+        self.name = 'MicrotagStop'
 
     def setStartTagIndex(self, index):
         self.startTagIndex = index
@@ -186,25 +187,24 @@ class MicrotagStop(MicrotagTickBased):
 # _____________________________________________________________________________
 #
 class MicrotagEvent(MicrotagTickBased):
-
     def __init__(self, tag=None, idAlias=None):
         MicrotagTickBased.__init__(self, tag, idAlias)
+        self.name = 'MicrotagEvent'
 
 
 #
 # _____________________________________________________________________________
 #
 class MicrotagData(MicrotagUntyped):
-
     def __init__(self, tag=None, idAlias=None):
         MicrotagUntyped.__init__(self, tag, idAlias)
+        self.name = 'MicrotagData'
 
 
 #
 # _____________________________________________________________________________
 #
 class MicrotagList(object):
-
     def __init__(self, idDict=None, dataToTime=None):
         self.rawTags = []
         self.analysedTags = None
@@ -219,13 +219,12 @@ class MicrotagList(object):
 
     def dataToTimeStr(self, data):
         time = self.dataToTime(data)
-        return '{0:,.{2}f} {1}'.format(time[0], time[1], time[2]) 
+        return '{0:,.{2}f} {1}'.format(time[0], time[1], time[2])
 
-    def dataToTimeDiffStr(self, dataStart, dataStop):
-        timeStart = self.dataToTime(dataStart)
-        timeStop = self.dataToTime(dataStop)
-        return '{0:,.{2}f} {1}'.format(
-                timeStop[0] - timeStart[0], timeStop[1], timeStop[2])
+    def dataToTimeDiffStr(self, dStart, dStop):
+        tStart = self.dataToTime(dStart)
+        tStop = self.dataToTime(dStop)
+        return '{0:,.{2}f} {1}'.format(tStop[0] - tStart[0], tStop[1], tStop[2])
 
     def getRawTags(self):
         return self.rawTags
@@ -264,7 +263,6 @@ class MicrotagList(object):
             else:
                 analysedTag = MicrotagUntyped(tag)
 
-          
             if isinstance(analysedTag, MicrotagStart):
 
                 # add indices of start tags to list of unmatched start tags
@@ -274,10 +272,9 @@ class MicrotagList(object):
 
                 # find corresponding start tag
                 matchingStarts = [j for j in unmatchedStarts[::-1] \
-                        if isinstance(self.getAnalysedTags()[j], MicrotagStart) \
-                        and self.getAnalysedTags()[j].getIdAlias() == analysedTag.getIdAlias()]
+                                  if isinstance(self.getAnalysedTags()[j], MicrotagStart) \
+                                  and self.getAnalysedTags()[j].getIdAlias() == analysedTag.getIdAlias()]
                 if len(matchingStarts) > 0:
-
                     del unmatchedStarts[unmatchedStarts.index(matchingStarts[0])]
 
                     analysedTag.setStartTagIndex(matchingStarts[0])
@@ -295,8 +292,8 @@ class MicrotagList(object):
 
         # determine length of longest string in tag id alias dictionary
         # (removing leading type definitions, if present)
-        widthId = max([len(s if s.find(':') == -1 else s[s.find(':')+1:]) \
-                for s in self.idDict.values()] + [8])
+        widthId = max([len(s if s.find(':') == -1 else s[s.find(':') + 1:]) \
+                       for s in self.idDict.values()] + [8])
 
         # determine length of highest tag index
         widthIndex = len('{0}'.format(len(self.getAnalysedTags())))
@@ -311,22 +308,18 @@ class MicrotagList(object):
 
             if isinstance(tag, MicrotagStart):
                 tagType = '<'
-                idAlias = TextFormatter.makeBoldGreen('{0:{1}}' \
-                        .format(tag.getIdAlias(), widthId + 2))
+                idAlias = TextFormatter.makeBoldGreen('{0:{1}}'.format(tag.getIdAlias(), widthId + 2))
             elif isinstance(tag, MicrotagStop):
                 tagType = '>'
-                idAlias = TextFormatter.makeBoldRed('{0:{1}}' \
-                        .format(tag.getIdAlias(), widthId + 2))
+                idAlias = TextFormatter.makeBoldRed('{0:{1}}'.format(tag.getIdAlias(), widthId + 2))
             elif isinstance(tag, MicrotagEvent):
                 tagType = '!'
-                idAlias = TextFormatter.makeBoldYellow('{0:{1}}' \
-                        .format(tag.getIdAlias(), widthId + 2))
+                idAlias = TextFormatter.makeBoldYellow('{0:{1}}'.format(tag.getIdAlias(), widthId + 2))
             elif isinstance(tag, MicrotagData):
                 tagType = 'D'
-                idAlias = TextFormatter.makeBoldBlue('{0:{1}}' \
-                        .format(tag.getIdAlias(), widthId + 2))
+                idAlias = TextFormatter.makeBoldBlue('{0:{1}}'.format(tag.getIdAlias(), widthId + 2))
             else:
-                tagType = '?'                    
+                tagType = '?'
                 if tag.getIdAlias() is not None:
                     idAlias = tag.getIdAlias()
                 else:
@@ -334,30 +327,34 @@ class MicrotagList(object):
                 idAlias = '{0:{1}}'.format(idAlias, widthId + 2)
 
             line += tagType + ' ' + idAlias
-        
-            # ===== tag content, i.e. time or data =====  
+
+            # ===== tag content, i.e. time or data =====
 
             if isinstance(tag, MicrotagTickBased):
                 line += '{0:>20}  '.format(self.dataToTimeStr(tag.tagData))
             else:
                 line += TextFormatter.makeBoldBlue('{0:>20}  ' \
-                        .format('[ 0x{0:08X} ]  '.format(tag.tagData)))
-        
-            # ===== start/stop tag matching =====  
-        
+                                                   .format('[ 0x{0:08X} ]  '.format(tag.tagData)))
+
+            # ===== start/stop tag matching =====
+
             if isinstance(tag, MicrotagStart):
 
                 # matching string
                 line += '--->[ {0:{1}} ]' \
-                        .format(tag.getStopTagIndex(), widthIndex)
+                    .format(tag.getStopTagIndex(), widthIndex)
 
             elif isinstance(tag, MicrotagStop):
 
                 # matching string
                 line += '[ {0:{1}} ]---({2:^{3}})--->[ {4:{1}} ]' \
-                        .format(tag.getStartTagIndex(), widthIndex, tag.getIdAlias(), widthId, i)
-                # time difference
-                line += '{0:>20}'.format(self.dataToTimeDiffStr(
+                    .format(tag.getStartTagIndex(), widthIndex, tag.getIdAlias(), widthId, i)
+
+                if tag.getStartTagIndex() is None:
+                    line += '<<unmatched>>'
+                else:
+                    # time difference
+                    line += '{0:>20}'.format(self.dataToTimeDiffStr(
                         self.getAnalysedTags()[tag.getStartTagIndex()].getTagData(), tag.getTagData()))
 
             lines += [line]
@@ -371,6 +368,54 @@ class MicrotagList(object):
         if isinstance(index, int):
             return self.rawTags[index]
 
+    def to_json(self):
+        # prepare output as a list of lines
+        tags = []
+
+        for i, tag in enumerate(self.getAnalysedTags()):
+            _tDiff = 0
+            _tUnits = self.dataToTime(tag.getTagData())[1]
+            if isinstance(tag, MicrotagStop):
+                tStart = self.dataToTime(self.getAnalysedTags()[tag.getStartTagIndex()].getTagData())
+                tStop = self.dataToTime(tag.getTagData())
+                _tDiff = tStop[0] - tStart[0]
+
+            tagType = dict(MicrotagStart='start', MicrotagStop='stop',
+                           MicrotagEvent='event', MicrotagData='data').get(tag.className(), '')
+            tagEntry = dict(id=tag.getTagId(), type=tagType, alias=tag.getIdAlias(), data=tag.getTagData(),
+                            tdiff=_tDiff, units=_tUnits)
+            tags.append(tagEntry)
+
+        return tags
+
+    def to_csv(self, onlyLoops=False):
+        # prepare output as a list of lines
+        lines = ""
+
+        for i, tag in enumerate(self.getAnalysedTags()):
+            tDiff = 0
+            tUnits = self.dataToTime(tag.getTagData())[1]
+            line = ''
+            if isinstance(tag, MicrotagStop):
+                tStart = self.dataToTime(self.getAnalysedTags()[tag.getStartTagIndex()].getTagData())
+                tStop = self.dataToTime(tag.getTagData())
+                tDiff = tStop[0] - tStart[0]
+
+            tagType = dict(MicrotagStart='start', MicrotagStop='stop',
+                           MicrotagEvent='event', MicrotagData='data').get(tag.className(), '')
+
+            line = "\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\"".\
+                format(i, tag.getTagId(), tagType, tag.getIdAlias(), tag.getTagData())
+
+            if tDiff:
+                line += "\"{0}\",\"{1}\"".format(tDiff, tUnits)
+            elif onlyLoops and not tDiff:
+                continue
+
+            lines += line + '\n'
+
+        return lines
+
     def importFromCodes(self, codes):
         lenBefore = len(self.rawTags)
         for code in codes.split('\n'):
@@ -383,12 +428,14 @@ class MicrotagList(object):
         # return the number of tags imported
         return len(self.rawTags) - lenBefore
 
-    def importFromFile(self, filename):
-        f = open(filename, 'r')
+    def importFromFile(self, _file):
+        # If user gave a filename open it, otherwise work with content
+        try:
+            f = open(_file, 'r')
+        except TypeError:
+            f = _file
         lines = [line.strip() for line in f]
-        codes = '\n'.join([line for line in lines
-                if len(line) == 8 and line[0] != '#'])
-        f.close()
+        codes = '\n'.join([line for line in lines if len(line) == 8 and line[0] != '#'])
         if len(codes) > 0:
             return self.importFromCodes(codes)
         else:
@@ -402,7 +449,6 @@ class MicrotagList(object):
 # _____________________________________________________________________________
 #
 def main(argv):
-
     if len(argv) == 1:
         filename = argv[0]
     else:
@@ -411,26 +457,37 @@ def main(argv):
         return
 
     idDict = {
-        0x0000 : 'start:Direct',
-        0x0001 : 'stop:Direct',
-        0x0002 : 'start:Loop',
-        0x0003 : 'stop:Loop',
-        0x1000 : 'data:Counts'
+        0x0000: 'start:Direct',
+        0x0001: 'stop:Direct',
+        0x0002: 'start:Loop',
+        0x0003: 'stop:Loop',
+        0x1000: 'data:Counts'
     }
 
     # read input file
-    microtags = MicrotagList(idDict) #, lambda c: (c / 84E6, 's', 3))
+    microtags = MicrotagList(idDict)  # , lambda c: (c / 84E6, 's', 3)) #,
 
-    try:
-        n = microtags.importFromFile(filename)
-        print('Imported {0} microtag(s).'.format(n))
-    except:
-        print "Failed to read/parse input file. Stopping."
-        return
+    # try:
+    n = microtags.importFromFile(filename)
+    print('Imported {0} microtag(s).'.format(n))
+
+    # except:
+    #    print "Failed to read/parse input file. Stopping."
+    #    return
 
     microtags.analyse()
 
-    print(microtags)
+    print '------------------ Standard colorful output ----------------------'
+    print microtags
+
+    print '------------------ JSON ready format output ----------------------'
+    print microtags.to_json()
+
+    print '------------------- CSV ready format output ----------------------'
+    print microtags.to_csv()
+
+    print '------------ Only loops in CSV ready format output ---------------'
+    print microtags.to_csv(onlyLoops=True)
 
 
 #
@@ -438,4 +495,3 @@ def main(argv):
 #
 if __name__ == "__main__":
     main(sys.argv[1:]);
-
