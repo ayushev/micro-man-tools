@@ -382,8 +382,8 @@ class MicrotagList(object):
 
             tagType = dict(MicrotagStart='start', MicrotagStop='stop',
                            MicrotagEvent='event', MicrotagData='data').get(tag.className(), '')
-            tagEntry = dict(id=tag.getTagId(), type=tagType, alias=tag.getIdAlias(), data=tag.getTagData(),
-                            tdiff=tDiff, units=tUnits)
+            tagEntry = dict(id=tag.getTagId(), type=tagType, alias=tag.getIdAlias(),
+                            data=self.dataToTime(tag.getTagData())[0], tdiff=tDiff, units=tUnits)
 
             if onlyLoops and not tDiff:
                 continue
@@ -409,10 +409,10 @@ class MicrotagList(object):
                            MicrotagEvent='event', MicrotagData='data').get(tag.className(), '')
 
             line = "\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\"".\
-                format(i, tag.getTagId(), tagType, tag.getIdAlias(), tag.getTagData())
+                format(i, tag.getTagId(), tagType, tag.getIdAlias(), self.dataToTime(tag.getTagData())[0])
 
             if tDiff:
-                line += "\"{0}\",\"{1}\"".format(tDiff, tUnits)
+                line += ",\"{0}\",\"{1}\"".format(tDiff, tUnits)
             elif onlyLoops and not tDiff:
                 continue
 
@@ -469,7 +469,7 @@ def main(argv):
     }
 
     # read input file
-    microtags = MicrotagList(idDict)  # , lambda c: (c / 84E6, 's', 3)) #,
+    microtags = MicrotagList(idDict, lambda c: (c / 84E6, 's', 3))
 
     # try:
     n = microtags.importFromFile(filename)
