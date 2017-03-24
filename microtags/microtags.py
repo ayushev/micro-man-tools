@@ -373,17 +373,17 @@ class MicrotagList(object):
         tags = []
 
         for i, tag in enumerate(self.getAnalysedTags()):
-            _tDiff = 0
-            _tUnits = self.dataToTime(tag.getTagData())[1]
+            tDiff = 0
+            tUnits = self.dataToTime(tag.getTagData())[1]
             if isinstance(tag, MicrotagStop):
                 tStart = self.dataToTime(self.getAnalysedTags()[tag.getStartTagIndex()].getTagData())
                 tStop = self.dataToTime(tag.getTagData())
-                _tDiff = tStop[0] - tStart[0]
+                tDiff = tStop[0] - tStart[0]
 
             tagType = dict(MicrotagStart='start', MicrotagStop='stop',
                            MicrotagEvent='event', MicrotagData='data').get(tag.className(), '')
             tagEntry = dict(id=tag.getTagId(), type=tagType, alias=tag.getIdAlias(), data=tag.getTagData(),
-                            tdiff=_tDiff, units=_tUnits)
+                            tdiff=tDiff, units=tUnits)
             tags.append(tagEntry)
 
         return tags
