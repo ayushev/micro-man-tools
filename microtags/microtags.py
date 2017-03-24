@@ -368,7 +368,7 @@ class MicrotagList(object):
         if isinstance(index, int):
             return self.rawTags[index]
 
-    def to_json(self):
+    def to_json(self, onlyLoops=False):
         # prepare output as a list of lines
         tags = []
 
@@ -384,6 +384,10 @@ class MicrotagList(object):
                            MicrotagEvent='event', MicrotagData='data').get(tag.className(), '')
             tagEntry = dict(id=tag.getTagId(), type=tagType, alias=tag.getIdAlias(), data=tag.getTagData(),
                             tdiff=tDiff, units=tUnits)
+
+            if onlyLoops and not tDiff:
+                continue
+
             tags.append(tagEntry)
 
         return tags
@@ -482,6 +486,9 @@ def main(argv):
 
     print '------------------ JSON ready format output ----------------------'
     print microtags.to_json()
+
+    print '------------ Only loops in JSON ready format output ---------------'
+    print microtags.to_json(onlyLoops=True)
 
     print '------------------- CSV ready format output ----------------------'
     print microtags.to_csv()
